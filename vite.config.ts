@@ -5,7 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: mode === "production" ? "/justone/" : "/",
+  base: mode === "production" ? "/justone-connection/" : "/",
   server: {
     host: "::",
     port: 8080,

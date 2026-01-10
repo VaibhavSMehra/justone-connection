@@ -14,7 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      campuses: {
+        Row: {
+          allowed_domains: string[]
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          allowed_domains: string[]
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          allowed_domains?: string[]
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      otp_codes: {
+        Row: {
+          code: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          used: boolean
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          used?: boolean
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          used?: boolean
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          campus_id: string | null
+          created_at: string
+          email: string
+          id: string
+          user_id: string
+          verified: boolean
+        }
+        Insert: {
+          campus_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          user_id: string
+          verified?: boolean
+        }
+        Update: {
+          campus_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          user_id?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      responses: {
+        Row: {
+          answers_encrypted: string
+          campus_id: string
+          created_at: string
+          id: string
+          questionnaire_version: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answers_encrypted: string
+          campus_id: string
+          created_at?: string
+          id?: string
+          questionnaire_version: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answers_encrypted?: string
+          campus_id?: string
+          created_at?: string
+          id?: string
+          questionnaire_version?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "responses_campus_id_fkey"
+            columns: ["campus_id"]
+            isOneToOne: false
+            referencedRelation: "campuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

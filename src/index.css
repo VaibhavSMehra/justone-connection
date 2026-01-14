@@ -1,0 +1,137 @@
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Serif+Display:ital@0;1&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Deep maroon base - rich and intimate */
+    --background: 350 47% 12%; /* Dark maroon base */
+    --foreground: 38 65% 93%; /* Warm cream text */
+
+    --card: 350 45% 15%;
+    --card-foreground: 38 65% 93%;
+
+    --popover: 350 47% 12%;
+    --popover-foreground: 38 65% 93%;
+
+    /* Warm cream accent */
+    --primary: 38 65% 93%; /* Cream as primary accent */
+    --primary-foreground: 350 47% 12%;
+
+    --secondary: 350 40% 18%;
+    --secondary-foreground: 38 60% 88%;
+
+    --muted: 350 35% 20%;
+    --muted-foreground: 38 40% 70%;
+
+    --accent: 38 65% 93%;
+    --accent-foreground: 350 47% 12%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 350 35% 22%;
+    --input: 350 35% 22%;
+    --ring: 38 65% 93%;
+
+    --radius: 0.25rem;
+
+    /* Typography */
+    --font-serif: 'Cormorant Garamond', Georgia, serif;
+    --font-sans: 'Satoshi', system-ui, sans-serif;
+    --font-logo: 'DM Serif Display', Georgia, serif;
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+
+    /* Spacing */
+    --section-spacing: 10rem;
+    --content-max-width: 52rem;
+  }
+
+  .dark {
+    --background: 20 18% 10%;
+    --foreground: 36 30% 92%;
+    --card: 20 16% 13%;
+    --card-foreground: 36 30% 92%;
+    --popover: 20 18% 10%;
+    --popover-foreground: 36 30% 92%;
+    --primary: 350 45% 50%;
+    --primary-foreground: 20 18% 10%;
+    --secondary: 20 14% 18%;
+    --secondary-foreground: 36 28% 88%;
+    --muted: 20 12% 20%;
+    --muted-foreground: 36 22% 60%;
+    --accent: 350 45% 50%;
+    --accent-foreground: 20 18% 10%;
+    --border: 20 14% 22%;
+    --input: 20 14% 22%;
+    --ring: 350 45% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+    font-weight: 400;
+    letter-spacing: 0.005em;
+    line-height: 1.85;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+  }
+}
+
+@layer components {
+  .section-container {
+    @apply mx-auto px-6 md:px-8;
+    max-width: var(--content-max-width);
+  }
+
+  .section-spacing {
+    padding-top: var(--section-spacing);
+    padding-bottom: var(--section-spacing);
+  }
+
+  .divider-thin {
+    @apply w-12 h-px bg-primary/30 mx-auto;
+  }
+
+  .text-accent {
+    @apply text-primary;
+  }
+
+  /* Subtle paper texture overlay for tactility */
+  .texture-paper {
+    position: relative;
+  }
+  
+  .texture-paper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.015;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

@@ -8,7 +8,14 @@ const corsHeaders = {
 
 interface SendOtpRequest {
   email: string;
+  isAdminMode?: boolean;
 }
+
+// Admin email allowlist
+const ADMIN_EMAILS = [
+  "vaibhavmehra2027@u.northwestern.edu",
+  "antonyvincent2026@u.northwestern.edu"
+];
 
 // Rate limiting configuration
 const MAX_REQUESTS_PER_WINDOW = 3;
@@ -50,9 +57,10 @@ async function sendEmailWithMaileroo(
     }
 
     return { success: true };
-  } catch (error: any) {
-    console.error("[send-otp] Maileroo error:", error?.message);
-    return { success: false, error: error?.message };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("[send-otp] Maileroo error:", errorMessage);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -76,7 +84,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { email }: SendOtpRequest = await req.json();
+    const { email, isAdminMode }: SendOtpRequest = await req.json();
 
     if (!email || typeof email !== "string") {
       return new Response(
@@ -95,6 +103,19 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
     const domain = emailParts[1];
+
+    // SERVER-SIDE VALIDATION: Admin mode
+    if (isAdminMode) {
+      if (!ADMIN_EMAILS.includes(normalizedEmail)) {
+        return new Response(
+          JSON.stringify({
+            error: "admin_only",
+            message: "Admin access only."
+          }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    }
 
     // Rate limiting check
     const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000);
@@ -146,32 +167,46 @@ const handler = async (req: Request): Promise<Response> => {
         .insert({ email: normalizedEmail, request_count: 1, window_start: new Date().toISOString() });
     }
 
-    // Check if domain is allowed
-    const { data: campuses, error: campusError } = await supabase
-      .from("campuses")
-      .select("id, name, allowed_domains");
+    // Check if domain is allowed (only for non-admin mode)
+    let matchingCampus: { id: string; name: string; allowed_domains: string[] } | undefined;
+    
+    if (!isAdminMode) {
+      const { data: campuses, error: campusError } = await supabase
+        .from("campuses")
+        .select("id, name, allowed_domains");
 
-    if (campusError) {
-      console.error("Error fetching campuses:", campusError);
-      return new Response(
-        JSON.stringify({ error: "Failed to verify campus" }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      if (campusError) {
+        console.error("Error fetching campuses:", campusError);
+        return new Response(
+          JSON.stringify({ error: "Failed to verify campus" }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Find matching campus
+      matchingCampus = campuses?.find((campus: { id: string; name: string; allowed_domains: string[] }) =>
+        campus.allowed_domains.includes(domain)
       );
-    }
 
-    // Find matching campus
-    const matchingCampus = campuses?.find((campus) =>
-      campus.allowed_domains.includes(domain)
-    );
-
-    if (!matchingCampus) {
-      return new Response(
-        JSON.stringify({
-          error: "domain_not_allowed",
-          message: "JustOne is currently limited to select campuses. If you believe this is a mistake, join the waitlist."
-        }),
-        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      if (!matchingCampus) {
+        return new Response(
+          JSON.stringify({
+            error: "domain_not_allowed",
+            message: "Please use your institutional email from Ashoka / Jindal / CHRIST."
+          }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    } else {
+      // For admin mode, use Northwestern as the campus (or create a virtual admin campus)
+      const { data: campuses } = await supabase
+        .from("campuses")
+        .select("id, name, allowed_domains")
+        .eq("name", "Northwestern University")
+        .limit(1)
+        .maybeSingle();
+      
+      matchingCampus = campuses || undefined;
     }
 
     // Generate 6-digit OTP
@@ -202,6 +237,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Send email with OTP via Maileroo
+    const campusDisplay = isAdminMode ? "Admin" : matchingCampus?.name || "your campus";
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -217,7 +253,7 @@ const handler = async (req: Request): Promise<Response> => {
       <body>
         <div class="container">
           <h1 style="color: #1a1a1a; font-weight: normal;">Your verification code</h1>
-          <p style="color: #666;">Enter this code to verify your ${matchingCampus.name} email:</p>
+          <p style="color: #666;">Enter this code to verify your ${campusDisplay} email:</p>
           <div class="code">${otp}</div>
           <p style="color: #666;">This code expires in 10 minutes.</p>
           <div class="footer">
@@ -245,20 +281,22 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("OTP email sent successfully to:", normalizedEmail);
+    console.log("OTP email sent successfully to:", normalizedEmail, "isAdmin:", isAdminMode);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        campus_id: matchingCampus.id,
-        campus_name: matchingCampus.name 
+        campus_id: matchingCampus?.id,
+        campus_name: matchingCampus?.name,
+        isAdminMode: !!isAdminMode
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-  } catch (error: any) {
-    console.error("Error in send-otp:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error in send-otp:", errorMessage);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

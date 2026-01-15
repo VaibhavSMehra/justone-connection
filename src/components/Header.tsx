@@ -20,11 +20,30 @@ const Header = () => {
 
   const handleSignInClick = () => {
     if (user) {
-      // Already authenticated, go directly to questionnaire
+      // Already authenticated, go directly to questionnaire or app
       navigate("/questionnaire");
     } else {
-      // Scroll to hero section where the verification form is
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      // Navigate to home and scroll to the sign-in form
+      if (window.location.pathname !== "/") {
+        navigate("/");
+        // Wait for navigation then scroll
+        setTimeout(() => {
+          const heroSection = document.getElementById("hero-signin");
+          if (heroSection) {
+            heroSection.scrollIntoView({ behavior: "smooth" });
+          } else {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }
+        }, 100);
+      } else {
+        // Already on home, scroll to hero section
+        const heroSection = document.getElementById("hero-signin");
+        if (heroSection) {
+          heroSection.scrollIntoView({ behavior: "smooth" });
+        } else {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }
     }
   };
 

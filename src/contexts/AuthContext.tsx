@@ -11,12 +11,16 @@ interface Profile {
   created_at: string;
 }
 
+type AppRole = "admin" | "student" | null;
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
   hasCompletedOnboarding: boolean;
+  userRole: AppRole;
+  isAdmin: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<Profile | null>;
   waitForAuth: () => Promise<{ user: User | null; profile: Profile | null }>;
@@ -43,6 +47,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const [userRole, setUserRole] = useState<AppRole>(null);
+
+  const fetchUserRole = useCallback(async (userId: string): Promise<AppRole> => {
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching user role:", error);
+      return null;
+    }
+    return (data?.role as AppRole) ?? null;
+  }, []);
 
   const fetchProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     const { data, error } = await supabase
@@ -85,10 +104,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const completed = await checkOnboardingStatus(currentSession.user.id);
       setHasCompletedOnboarding(completed);
       
+      // Fetch role
+      const role = await fetchUserRole(currentSession.user.id);
+      setUserRole(role);
+      
       return profileData;
     }
     return null;
-  }, [fetchProfile, checkOnboardingStatus]);
+  }, [fetchProfile, checkOnboardingStatus, fetchUserRole]);
 
   // Wait for auth state to be fully ready - useful after setting session
   const waitForAuth = useCallback(async (): Promise<{ user: User | null; profile: Profile | null }> => {
@@ -111,8 +134,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const completed = await checkOnboardingStatus(currentSession.user.id);
     setHasCompletedOnboarding(completed);
 
+    // Fetch role
+    const role = await fetchUserRole(currentSession.user.id);
+    setUserRole(role);
+
     return { user: currentSession.user, profile: profileData };
-  }, [fetchProfile, checkOnboardingStatus]);
+  }, [fetchProfile, checkOnboardingStatus, fetchUserRole]);
 
   useEffect(() => {
     let mounted = true;
@@ -136,12 +163,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             // Check onboarding status
             const completed = await checkOnboardingStatus(currentSession.user.id);
             setHasCompletedOnboarding(completed);
+
+            // Fetch role
+            const role = await fetchUserRole(currentSession.user.id);
+            setUserRole(role);
             
             setLoading(false);
           }, 0);
         } else {
           setProfile(null);
           setHasCompletedOnboarding(false);
+          setUserRole(null);
           setLoading(false);
         }
       }
@@ -161,6 +193,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           
           const completed = await checkOnboardingStatus(initialSession.user.id);
           setHasCompletedOnboarding(completed);
+
+          const role = await fetchUserRole(initialSession.user.id);
+          setUserRole(role);
           
           setLoading(false);
         }
@@ -173,7 +208,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile, checkOnboardingStatus]);
+  }, [fetchProfile, checkOnboardingStatus, fetchUserRole]);
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
@@ -181,7 +216,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setSession(null);
     setProfile(null);
     setHasCompletedOnboarding(false);
+    setUserRole(null);
   }, []);
+
+  const isAdmin = userRole === "admin";
 
   return (
     <AuthContext.Provider
@@ -191,6 +229,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         profile,
         loading,
         hasCompletedOnboarding,
+        userRole,
+        isAdmin,
         signOut,
         refreshProfile,
         waitForAuth,

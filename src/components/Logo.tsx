@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 interface LogoProps {
   size?: "default" | "large" | "hero";
@@ -23,7 +24,7 @@ const Logo = ({ size = "default" }: LogoProps) => {
   const gap = isHero ? "gap-3 sm:gap-4 md:gap-5" : isLarge ? "gap-2 sm:gap-3 md:gap-4" : "gap-2 sm:gap-3";
   
   return (
-    <div className={`flex items-center ${gap}`}>
+    <Link to="/" className={`flex items-center ${gap} cursor-pointer hover:opacity-90 transition-opacity`}>
       {/* Heart with 1 cutout - using primary (burgundy) color */}
       <motion.div 
         className={`relative ${iconSize}`}
@@ -63,7 +64,7 @@ const Logo = ({ size = "default" }: LogoProps) => {
         <span className="text-primary">One</span>
         <sup className="text-[0.4em] text-muted-foreground ml-0.5 align-super">™</sup>
       </span>
-    </div>
+    </Link>
   );
 };
 

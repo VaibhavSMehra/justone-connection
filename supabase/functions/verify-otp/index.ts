@@ -9,7 +9,14 @@ const corsHeaders = {
 interface VerifyOtpRequest {
   email: string;
   code: string;
+  isAdminMode?: boolean;
 }
+
+// Admin email allowlist
+const ADMIN_EMAILS = [
+  "vaibhavmehra2027@u.northwestern.edu",
+  "antonyvincent2026@u.northwestern.edu"
+];
 
 // Maximum verification attempts before OTP is invalidated
 const MAX_VERIFICATION_ATTEMPTS = 5;
@@ -30,7 +37,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
-    const { email, code }: VerifyOtpRequest = await req.json();
+    const { email, code, isAdminMode }: VerifyOtpRequest = await req.json();
 
     if (!email || !code) {
       return new Response(
@@ -41,6 +48,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     const normalizedEmail = email.toLowerCase().trim();
     const normalizedCode = code.trim();
+
+    // SERVER-SIDE VALIDATION: Admin mode
+    if (isAdminMode) {
+      if (!ADMIN_EMAILS.includes(normalizedEmail)) {
+        return new Response(
+          JSON.stringify({
+            error: "admin_only",
+            message: "Admin access only."
+          }),
+          { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    }
 
     // Validate code format
     if (!/^\d{6}$/.test(normalizedCode)) {
@@ -138,19 +158,32 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Get campus for the email domain
     const domain = normalizedEmail.split("@")[1];
-    const { data: campuses } = await supabase
-      .from("campuses")
-      .select("id, name, allowed_domains");
+    let matchingCampus: { id: string; name: string; allowed_domains: string[] } | null = null;
 
-    const matchingCampus = campuses?.find((campus) =>
-      campus.allowed_domains.includes(domain)
-    );
+    if (isAdminMode) {
+      // For admins, use Northwestern campus
+      const { data: campuses } = await supabase
+        .from("campuses")
+        .select("id, name, allowed_domains")
+        .eq("name", "Northwestern University")
+        .limit(1)
+        .maybeSingle();
+      matchingCampus = campuses;
+    } else {
+      const { data: campuses } = await supabase
+        .from("campuses")
+        .select("id, name, allowed_domains");
 
-    if (!matchingCampus) {
-      return new Response(
-        JSON.stringify({ error: "Campus not found for this email domain" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      matchingCampus = campuses?.find((campus: { id: string; name: string; allowed_domains: string[] }) =>
+        campus.allowed_domains.includes(domain)
+      ) || null;
+
+      if (!matchingCampus) {
+        return new Response(
+          JSON.stringify({ error: "Please use your institutional email from Ashoka / Jindal / CHRIST." }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
     }
 
     // Check if user exists, if not create with a random password
@@ -189,7 +222,7 @@ const handler = async (req: Request): Promise<Response> => {
       .upsert({
         user_id: userId,
         email: normalizedEmail,
-        campus_id: matchingCampus.id,
+        campus_id: matchingCampus?.id || null,
         verified: true,
       }, {
         onConflict: "user_id",
@@ -197,6 +230,22 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (profileError) {
       console.error("Error upserting profile:", profileError);
+    }
+
+    // Determine role and upsert user_roles
+    const role = ADMIN_EMAILS.includes(normalizedEmail) ? "admin" : "student";
+    
+    const { error: roleError } = await supabase
+      .from("user_roles")
+      .upsert({
+        user_id: userId,
+        role: role,
+      }, {
+        onConflict: "user_id,role",
+      });
+
+    if (roleError) {
+      console.error("Error upserting user role:", roleError);
     }
 
     // Generate a magic link and extract the token_hash
@@ -237,21 +286,27 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    console.log("User verified successfully:", normalizedEmail, "role:", role);
+
     return new Response(
       JSON.stringify({
         success: true,
         user_id: userId,
-        campus_id: matchingCampus.id,
-        campus_name: matchingCampus.name,
-        access_token: sessionData.session.access_token,
-        refresh_token: sessionData.session.refresh_token,
+        campus_id: matchingCampus?.id,
+        campus_name: matchingCampus?.name,
+        role: role,
+        session: {
+          access_token: sessionData.session.access_token,
+          refresh_token: sessionData.session.refresh_token,
+        },
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
-  } catch (error: any) {
-    console.error("Error in verify-otp:", error);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error in verify-otp:", errorMessage);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }

@@ -10,6 +10,17 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { useCampus } from "@/contexts/CampusContext";
 import { usePostAuthRedirect } from "@/hooks/usePostAuthRedirect";
 
+// Admin email allowlist
+const ADMIN_EMAILS = [
+  "vaibhavmehra2027@u.northwestern.edu",
+  "antonyvincent2026@u.northwestern.edu"
+];
+
+// Check if email is in admin allowlist
+const isAdminEmail = (email: string): boolean => {
+  return ADMIN_EMAILS.includes(email.toLowerCase().trim());
+};
+
 // Get allowed domains from campus context
 const isAllowedDomain = (email: string, allowedDomains: string[]): boolean => {
   const domain = email.toLowerCase().trim().split("@")[1];
@@ -39,6 +50,7 @@ const Hero = () => {
   const [isFocused, setIsFocused] = useState(false);
   const [resendCount, setResendCount] = useState(0);
   const [isResending, setIsResending] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(false);
   const maxResendAttempts = 3;
 
   // Get all allowed domains from all campuses for validation
@@ -48,17 +60,28 @@ const Hero = () => {
     e.preventDefault();
     if (!email) return;
 
-    if (!isAllowedDomain(email, allAllowedDomains)) {
-      setErrorMessage("Please use your campus email address.");
-      return;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Admin mode validation
+    if (isAdminMode) {
+      if (!isAdminEmail(normalizedEmail)) {
+        setErrorMessage("Admin access only.");
+        return;
+      }
+    } else {
+      // Student mode validation - check campus domains
+      if (!isAllowedDomain(normalizedEmail, allAllowedDomains)) {
+        setErrorMessage("Please use your institutional email from Ashoka / Jindal / CHRIST.");
+        return;
+      }
     }
 
     setLoadingState("loading");
     setErrorMessage("");
 
     try {
-      const { data, error } = await supabase.functions.invoke("send-waitlist-otp", {
-        body: { email: email.trim() },
+      const { data, error } = await supabase.functions.invoke("send-otp", {
+        body: { email: email.trim(), isAdminMode },
       });
 
       if (error) {
@@ -107,8 +130,8 @@ const Hero = () => {
     setFlowState("verifying");
 
     try {
-      const { data, error } = await supabase.functions.invoke("verify-waitlist-otp", {
-        body: { email: email.trim(), code: otp },
+      const { data, error } = await supabase.functions.invoke("verify-otp", {
+        body: { email: email.trim(), code: otp, isAdminMode },
       });
 
       // Handle error responses - when edge function returns non-2xx, error is set and data contains the response body
@@ -185,8 +208,8 @@ const Hero = () => {
     setErrorMessage("");
 
     try {
-      const { data, error } = await supabase.functions.invoke("send-waitlist-otp", {
-        body: { email: email.trim() },
+      const { data, error } = await supabase.functions.invoke("send-otp", {
+        body: { email: email.trim(), isAdminMode },
       });
 
       if (error) {
@@ -223,10 +246,14 @@ const Hero = () => {
   };
 
   const isLoading = loadingState === "loading";
-  const hasValidEmail = email.includes("@") && isAllowedDomain(email, allAllowedDomains);
+  const hasValidEmail = email.includes("@") && (
+    isAdminMode 
+      ? isAdminEmail(email) 
+      : isAllowedDomain(email, allAllowedDomains)
+  );
 
   return (
-    <section ref={sectionRef} className="min-h-screen flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
+    <section id="hero-signin" ref={sectionRef} className="min-h-screen flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
       {/* Cinematic campus background with couple stargazing - parallax effect */}
       <motion.div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-110"
@@ -433,12 +460,27 @@ const Hero = () => {
                         : 'opacity-50 saturate-0'
                   }`}
                 >
-                  {isLoading ? "Sending..." : "Get Matched"}
+                  {isLoading ? "Sending..." : isAdminMode ? "Admin Sign In" : "Get Matched"}
                 </Button>
 
                 <p className="text-center text-muted-foreground/60 text-xs font-medium">
-                  Enter your campus email to get started
+                  {isAdminMode 
+                    ? "Admin access restricted to authorized emails only"
+                    : "Enter your campus email to get started"
+                  }
                 </p>
+
+                {/* Admin mode toggle */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAdminMode(!isAdminMode);
+                    setErrorMessage("");
+                  }}
+                  className="block mx-auto text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors underline underline-offset-2"
+                >
+                  {isAdminMode ? "Switch to Student Sign In" : "Admin Sign In"}
+                </button>
               </form>
             )}
 

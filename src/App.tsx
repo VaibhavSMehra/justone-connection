@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Verify from "./pages/Verify";
 import Questionnaire from "./pages/Questionnaire";
 import Dashboard from "./pages/Dashboard";
+import AdminPage from "./pages/AdminPage";
 import FAQPage from "./pages/FAQPage";
 import AboutPage from "./pages/AboutPage";
 import PrivacyPage from "./pages/PrivacyPage";
@@ -47,6 +48,7 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route path="/admin" element={<AdminPage />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

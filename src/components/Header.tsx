@@ -18,21 +18,6 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const focusHeroSignin = () => {
-    const heroSection = document.getElementById("hero-signin");
-    if (heroSection) {
-      heroSection.scrollIntoView({ behavior: "smooth" });
-    } else {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-
-    // Focus the actual email input so it feels like a real "open sign-in" action
-    window.setTimeout(() => {
-      const input = document.getElementById("hero-email-input") as HTMLInputElement | null;
-      input?.focus();
-    }, 250);
-  };
-
   const handleSignInClick = () => {
     if (user) {
       if (isAdmin) {
@@ -45,13 +30,8 @@ const Header = () => {
       return;
     }
 
-    // Not signed in → open the same sign-in flow on the home hero
-    if (window.location.pathname !== "/") {
-      navigate("/");
-      window.setTimeout(() => focusHeroSignin(), 150);
-    } else {
-      focusHeroSignin();
-    }
+    // Not signed in → go to the sign-in page
+    navigate("/signin");
   };
 
   return (

@@ -26,12 +26,6 @@ export const CAMPUSES: Campus[] = [
     location: "Sonipat",
     domains: ["jgu.edu.in"],
   },
-  {
-    id: "northwestern-evanston",
-    name: "Northwestern University",
-    location: "Evanston",
-    domains: ["northwestern.edu", "u.northwestern.edu"],
-  },
 ];
 
 interface CampusContextType {

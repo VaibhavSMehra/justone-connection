@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CampusProvider } from "@/contexts/CampusContext";
 import Index from "./pages/Index";
 import Verify from "./pages/Verify";
+import SignIn from "./pages/SignIn";
 import Questionnaire from "./pages/Questionnaire";
 import Dashboard from "./pages/Dashboard";
 import AdminPage from "./pages/AdminPage";
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/signin" element={<SignIn />} />
               <Route path="/verify" element={<Verify />} />
               <Route path="/faqs" element={<FAQPage />} />
               <Route

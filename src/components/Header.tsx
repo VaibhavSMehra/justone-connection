@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, hasCompletedOnboarding, isAdmin } = useAuth();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -18,32 +18,39 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const focusHeroSignin = () => {
+    const heroSection = document.getElementById("hero-signin");
+    if (heroSection) {
+      heroSection.scrollIntoView({ behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    // Focus the actual email input so it feels like a real "open sign-in" action
+    window.setTimeout(() => {
+      const input = document.getElementById("hero-email-input") as HTMLInputElement | null;
+      input?.focus();
+    }, 250);
+  };
+
   const handleSignInClick = () => {
     if (user) {
-      // Already authenticated, go directly to questionnaire or app
-      navigate("/questionnaire");
-    } else {
-      // Navigate to home and scroll to the sign-in form
-      if (window.location.pathname !== "/") {
-        navigate("/");
-        // Wait for navigation then scroll
-        setTimeout(() => {
-          const heroSection = document.getElementById("hero-signin");
-          if (heroSection) {
-            heroSection.scrollIntoView({ behavior: "smooth" });
-          } else {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }
-        }, 100);
+      if (isAdmin) {
+        navigate("/admin");
+      } else if (hasCompletedOnboarding) {
+        navigate("/app");
       } else {
-        // Already on home, scroll to hero section
-        const heroSection = document.getElementById("hero-signin");
-        if (heroSection) {
-          heroSection.scrollIntoView({ behavior: "smooth" });
-        } else {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }
+        navigate("/questionnaire");
       }
+      return;
+    }
+
+    // Not signed in → open the same sign-in flow on the home hero
+    if (window.location.pathname !== "/") {
+      navigate("/");
+      window.setTimeout(() => focusHeroSignin(), 150);
+    } else {
+      focusHeroSignin();
     }
   };
 

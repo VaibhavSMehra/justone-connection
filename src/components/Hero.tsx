@@ -432,6 +432,7 @@ const Hero = () => {
                 >
                   <div className={`absolute -inset-3 rounded-sm bg-primary/5 transition-opacity duration-600 ${isFocused ? 'opacity-100' : 'opacity-0'}`} />
                   <Input
+                    id="hero-email-input"
                     type="email"
                     placeholder="your.name@campus.edu"
                     value={email}

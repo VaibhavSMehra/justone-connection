@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { X, Upload, FileText, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,9 +13,20 @@ interface ApplicationFormModalProps {
   onClose: () => void;
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+
 const ApplicationFormModal = ({ isOpen, onClose }: ApplicationFormModalProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [formData, setFormData] = useState({
     fullName: "",
     university: "",
@@ -23,7 +34,6 @@ const ApplicationFormModal = ({ isOpen, onClose }: ApplicationFormModalProps) =>
     major: "",
     email: "",
     whyJustOne: "",
-    linkedinOrResume: "",
   });
 
   const handleChange = (
@@ -33,13 +43,73 @@ const ApplicationFormModal = ({ isOpen, onClose }: ApplicationFormModalProps) =>
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setFileError(null);
+    
+    if (!file) {
+      setResumeFile(null);
+      return;
+    }
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setFileError("Please upload a PDF or Word document");
+      setResumeFile(null);
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setFileError("File size must be less than 5MB");
+      setResumeFile(null);
+      return;
+    }
+
+    setResumeFile(file);
+  };
+
+  const handleRemoveFile = () => {
+    setResumeFile(null);
+    setFileError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Extract base64 content after the data URL prefix
+        const base64 = result.split(",")[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
+      let resumeData = null;
+      
+      if (resumeFile) {
+        const base64Content = await fileToBase64(resumeFile);
+        resumeData = {
+          filename: resumeFile.name,
+          content: base64Content,
+          type: resumeFile.type,
+        };
+      }
+
       const { error } = await supabase.functions.invoke("send-career-application", {
-        body: formData,
+        body: {
+          ...formData,
+          resume: resumeData,
+        },
       });
 
       if (error) throw error;
@@ -55,6 +125,8 @@ const ApplicationFormModal = ({ isOpen, onClose }: ApplicationFormModalProps) =>
 
   const handleClose = () => {
     setIsSubmitted(false);
+    setResumeFile(null);
+    setFileError(null);
     setFormData({
       fullName: "",
       university: "",
@@ -62,7 +134,6 @@ const ApplicationFormModal = ({ isOpen, onClose }: ApplicationFormModalProps) =>
       major: "",
       email: "",
       whyJustOne: "",
-      linkedinOrResume: "",
     });
     onClose();
   };
@@ -214,17 +285,50 @@ const ApplicationFormModal = ({ isOpen, onClose }: ApplicationFormModalProps) =>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="linkedinOrResume" className="text-sm text-muted-foreground">
-                        LinkedIn or Resume URL (optional)
+                      <Label className="text-sm text-muted-foreground">
+                        Resume (optional)
                       </Label>
-                      <Input
-                        id="linkedinOrResume"
-                        name="linkedinOrResume"
-                        value={formData.linkedinOrResume}
-                        onChange={handleChange}
-                        placeholder="https://..."
-                        className="bg-background"
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="resume-upload"
                       />
+                      
+                      {!resumeFile ? (
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-dashed border-border rounded-md text-muted-foreground hover:text-foreground hover:border-foreground/50 transition-colors bg-background"
+                        >
+                          <Upload className="w-4 h-4" />
+                          <span className="text-sm">Upload PDF or Word document</span>
+                        </button>
+                      ) : (
+                        <div className="flex items-center justify-between py-3 px-4 border border-border rounded-md bg-muted/30">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                            <span className="text-sm text-foreground truncate">{resumeFile.name}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleRemoveFile}
+                            className="text-muted-foreground hover:text-destructive transition-colors p-1 flex-shrink-0"
+                            aria-label="Remove file"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                      
+                      {fileError && (
+                        <p className="text-sm text-destructive">{fileError}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        Max 5MB • PDF or Word
+                      </p>
                     </div>
 
                     <div className="pt-4">

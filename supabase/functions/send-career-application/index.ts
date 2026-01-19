@@ -6,6 +6,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+interface ResumeData {
+  filename: string;
+  content: string; // base64 encoded
+  type: string;
+}
+
 interface ApplicationRequest {
   fullName: string;
   university: string;
@@ -13,7 +19,13 @@ interface ApplicationRequest {
   major: string;
   email: string;
   whyJustOne: string;
-  linkedinOrResume?: string;
+  resume?: ResumeData | null;
+}
+
+interface MailerooAttachment {
+  filename: string;
+  content: string;
+  type: string;
 }
 
 // Maileroo API helper
@@ -23,7 +35,8 @@ async function sendEmailWithMaileroo(
   to: string,
   subject: string,
   html: string,
-  replyTo?: string
+  replyTo?: string,
+  attachments?: MailerooAttachment[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const body: Record<string, unknown> = {
@@ -40,6 +53,14 @@ async function sendEmailWithMaileroo(
 
     if (replyTo) {
       body.reply_to = { address: replyTo };
+    }
+
+    if (attachments && attachments.length > 0) {
+      body.attachments = attachments.map((att) => ({
+        filename: att.filename,
+        content: att.content,
+        type: att.type,
+      }));
     }
 
     const response = await fetch("https://smtp.maileroo.com/api/v2/emails", {
@@ -83,7 +104,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const application: ApplicationRequest = await req.json();
-    const { fullName, university, year, major, email, whyJustOne, linkedinOrResume } = application;
+    const { fullName, university, year, major, email, whyJustOne, resume } = application;
 
     // Validate required fields
     if (!fullName || !university || !year || !major || !email || !whyJustOne) {
@@ -95,6 +116,8 @@ const handler = async (req: Request): Promise<Response> => {
         }
       );
     }
+
+    const hasResume = resume && resume.filename && resume.content;
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -122,7 +145,7 @@ const handler = async (req: Request): Promise<Response> => {
             <p class="field"><strong>University:</strong> ${university}</p>
             <p class="field"><strong>Year:</strong> ${year}</p>
             <p class="field"><strong>Major:</strong> ${major}</p>
-            ${linkedinOrResume ? `<p class="field"><strong>LinkedIn/Resume:</strong> <a href="${linkedinOrResume}" style="color: #7A2E3A;">${linkedinOrResume}</a></p>` : ''}
+            ${hasResume ? `<p class="field"><strong>Resume:</strong> ${resume.filename} (attached)</p>` : ''}
           </div>
           
           <div class="section">
@@ -138,13 +161,24 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
+    // Prepare attachments if resume exists
+    const attachments: MailerooAttachment[] = [];
+    if (hasResume) {
+      attachments.push({
+        filename: resume.filename,
+        content: resume.content,
+        type: resume.type,
+      });
+    }
+
     const emailResult = await sendEmailWithMaileroo(
       mailerooApiKey,
       { address: "careers@justonematch.in", displayName: "JustOne Careers" },
       "support@justonematch.in",
       `Marketing Intern Application: ${fullName} (${university})`,
       emailHtml,
-      email
+      email,
+      attachments.length > 0 ? attachments : undefined
     );
 
     if (!emailResult.success) {
@@ -155,7 +189,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Application email sent successfully for:", fullName, university);
+    console.log("Application email sent successfully for:", fullName, university, hasResume ? "(with resume)" : "(no resume)");
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

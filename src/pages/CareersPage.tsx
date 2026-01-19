@@ -31,8 +31,7 @@ const CareersPage = () => {
 
   const benefits = [
     "Early-stage startup experience",
-    "Direct access to the founding team",
-    "Certificate + recommendation",
+    "Certificate of completion + recommendation",
     "Priority access to future roles",
   ];
 

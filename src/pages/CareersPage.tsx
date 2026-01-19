@@ -1,11 +1,14 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ApplicationFormModal from "@/components/ApplicationFormModal";
 
 const CareersPage = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   useEffect(() => {
     document.title = "Careers | JustOne";
     window.scrollTo(0, 0);
@@ -170,18 +173,23 @@ const CareersPage = () => {
             transition={{ duration: 0.5, delay: 0.8 }}
             className="pt-8 border-t border-border/50"
           >
-            <a
-              href="mailto:careers@justone.app?subject=Marketing Intern Application"
+            <button
+              onClick={() => setIsModalOpen(true)}
               className="inline-flex items-center gap-3 text-foreground hover:text-primary transition-colors group"
             >
               <span className="text-lg">Apply to work with us</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </a>
+            </button>
           </motion.div>
         </div>
       </section>
 
       <Footer />
+
+      <ApplicationFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </main>
   );
 };

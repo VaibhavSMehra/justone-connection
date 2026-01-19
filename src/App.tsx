@@ -14,6 +14,7 @@ import AdminPage from "./pages/AdminPage";
 import FAQPage from "./pages/FAQPage";
 import AboutPage from "./pages/AboutPage";
 import PrivacyPage from "./pages/PrivacyPage";
+import CareersPage from "./pages/CareersPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/signin" element={<SignIn />} />
               <Route path="/verify" element={<Verify />} />
               <Route path="/faqs" element={<FAQPage />} />
+              <Route path="/careers" element={<CareersPage />} />
               <Route
                 path="/questionnaire"
                 element={

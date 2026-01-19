@@ -124,6 +124,12 @@ const Footer = () => {
             >
               Privacy
             </Link>
+            <Link 
+              to="/careers" 
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hover:underline underline-offset-4"
+            >
+              Careers
+            </Link>
           </div>
 
           {/* Contact */}

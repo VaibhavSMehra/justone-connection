@@ -86,24 +86,25 @@ const ApplicationFormModal = ({ isOpen, onClose }: ApplicationFormModalProps) =>
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-x-4 top-[5%] md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 z-50 w-auto md:w-full md:max-w-lg"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8"
           >
-            <div className="bg-background border border-border rounded-lg shadow-lg max-h-[90vh] overflow-y-auto">
+            <div className="bg-background border border-border rounded-lg shadow-lg w-full max-w-[520px] max-h-[85vh] overflow-hidden flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-border">
+              <div className="flex items-center justify-between p-6 border-b border-border flex-shrink-0">
                 <h2 className="font-serif text-xl text-foreground">
                   {isSubmitted ? "Application Received" : "Apply"}
                 </h2>
                 <button
                   onClick={handleClose}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted"
+                  aria-label="Close"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Content */}
-              <div className="p-6">
+              <div className="p-6 overflow-y-auto flex-1">
                 {isSubmitted ? (
                   <motion.div
                     initial={{ opacity: 0 }}

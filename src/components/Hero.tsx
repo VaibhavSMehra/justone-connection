@@ -406,16 +406,6 @@ const Hero = () => {
             Each cycle, we introduce you to one carefully chosen person from {selectedCampus.name}.
           </motion.p>
 
-          {/* Valentine's Day reveal mention */}
-          <motion.p 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
-            className="text-sm font-medium mb-8 relative"
-          >
-            Matches revealed before Valentine's Day
-          </motion.p>
-
           {/* Email input / OTP form */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
